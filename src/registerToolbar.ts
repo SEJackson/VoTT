@@ -7,6 +7,7 @@ import { DrawPolygon } from "./react/components/toolbar/drawPolygon";
 import { ToolbarItemType } from "./react/components/toolbar/toolbarItem";
 import { NextAsset } from "./react/components/toolbar/nextAsset";
 import { PreviousAsset } from "./react/components/toolbar/previousAsset";
+import { CopyRectangle } from "./react/components/toolbar/copyRectangle";
 
 /**
  * Registers items for toolbar
@@ -32,6 +33,14 @@ export default function registerToolbar() {
         name: "drawPolygon",
         tooltip: "Draw Polygon",
         icon: "fa-draw-polygon",
+        group: "canvas",
+        type: ToolbarItemType.State,
+    });
+
+    ToolbarItemFactory.register(CopyRectangle, {
+        name: "copyRectangle",
+        tooltip: "Copy Rectangle",
+        icon: "far fa-clone",
         group: "canvas",
         type: ToolbarItemType.State,
     });
