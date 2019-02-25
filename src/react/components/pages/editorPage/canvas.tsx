@@ -1,7 +1,7 @@
 import React, { Fragment, ReactElement } from "react";
 import * as shortid from "shortid";
 import { CanvasTools } from "vott-ct";
-import { RegionData } from "vott-ct/lib/js/CanvasTools/Core/RegionData";
+import { RegionData, RegionDataType } from "vott-ct/lib/js/CanvasTools/Core/RegionData";
 import {
     AssetState, EditorMode, IAssetMetadata,
     IProject, IRegion, ITag, RegionType,
@@ -24,7 +24,6 @@ export interface ICanvasProps extends React.Props<Canvas> {
 export interface ICanvasState {
     currentAsset: IAssetMetadata;
     contentSource: ContentSource;
-    selectedRegions?: IRegion[];
 }
 
 export default class Canvas extends React.Component<ICanvasProps, ICanvasState> {
@@ -41,7 +40,6 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
     public state: ICanvasState = {
         currentAsset: this.props.selectedAsset,
         contentSource: null,
-        selectedRegions: [],
     };
 
     private intervalTimer: number = null;
@@ -72,16 +70,19 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
             this.clearAllRegions();
             this.setState({
                 currentAsset: this.props.selectedAsset,
-                selectedRegions: [],
+                // @ts-ignore
+                selectedRegions: this.getSelectedRegions(),
             });
         }
 
         if (this.props.selectionMode !== prevProps.selectionMode) {
             let  options = null;
             if (this.props.selectionMode === SelectionMode.COPYRECT) {
-                const selectedRegion = this.editor.RM.getSelectedRegionsBounds(); // this.state.selectedRegions[0];
+                const selectedRegion = this.getSelectedRegions(); // this.state.selectedRegions[0];
                 if (selectedRegion) {
-                    options = {template: new Rect(selectedRegion[0].width, selectedRegion[0].height)};
+                    options = {
+                        template: new Rect(selectedRegion[0].boundingBox.width, selectedRegion[0].boundingBox.height),
+                    };
                 } else {
                     throw new Error("No region selected to copy");
                 }
@@ -108,9 +109,18 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
      * @param selectedTag Tag name
      */
     public applyTag = (selectedTag: string) => {
-        for (const region of this.state.selectedRegions) {
+        for (const region of this.getSelectedRegions()) {
             this.toggleTagOnRegion(region, selectedTag);
         }
+    }
+
+    public getSelectedRegions(): IRegion[] {
+        // @ts-ignore
+        const selectedRegions = this.editor.RM.lookupSelectedRegions();
+        return selectedRegions.map((regionData) => {
+            return CanvasHelpers.fromRegionData(regionData.regionData,
+                this.regionDataTypeToRegionType(regionData.regionData.type));
+        });
     }
 
     /**
@@ -154,7 +164,6 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
         };
         this.setState({
             currentAsset,
-            selectedRegions,
         }, () => {
             this.props.onAssetMetadataChanged(currentAsset);
         });
@@ -208,20 +217,22 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
     }
 
     /**
-     * Method called when deleting a region from the editor
-     * @param {string} id the id of the deleted region
+     * Method called when selecting a region from the editor
+     * @param {string} id the id of the selected region
      * @param {boolean} multiselection boolean whether multiselect is active
      * @returns {void}
      */
     private onRegionSelected = (id: string, multiselect: boolean) => {
-        const region = this.state.currentAsset.regions.find((region) => region.id === id);
-        let selectedRegions = this.state.selectedRegions;
-        if (multiselect) {
-            selectedRegions.push(region);
-        } else {
-            selectedRegions = [region];
-        }
-        this.setState({ selectedRegions });
+        // const region = this.state.currentAsset.regions.find((region) => region.id === id);
+        // // @ts-ignore
+        // let selectedRegions = this.editor.RM.lookupSelectedRegions();
+        // if (multiselect) {
+        //     selectedRegions.push(region);
+        // } else {
+        //     selectedRegions = [region];
+        // }
+        // this.setState({ selectedRegions });
+        console.log(id);
     }
 
     private renderChildren = () => {
@@ -370,13 +381,9 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
 
         // Set selected region to the last region
         this.setState({
-            selectedRegions: [this.state.currentAsset.regions[this.state.currentAsset.regions.length - 1]],
-        });
-    }
-
-    private updateSelected = (selectedRegions: IRegion[]) => {
-        this.setState({
-            selectedRegions,
+            // @ts-ignore
+            selectedRegions: this.editor.RM.lookupSelectedRegions(),
+            // [this.state.currentAsset.regions[this.state.currentAsset.regions.length - 1]],
         });
     }
 
@@ -393,6 +400,27 @@ export default class Canvas extends React.Component<ICanvasProps, ICanvasState> 
                 type = RegionType.Point;
                 break;
             case EditorMode.Polyline:
+                type = RegionType.Polyline;
+                break;
+            default:
+                break;
+        }
+        return type;
+    }
+
+    private regionDataTypeToRegionType(regiondDataType: RegionDataType): RegionType {
+        let type;
+        switch (regiondDataType) {
+            case RegionDataType.Rect:
+                type = RegionType.Rectangle;
+                break;
+            case RegionDataType.Polygon:
+                type = RegionType.Polygon;
+                break;
+            case RegionDataType.Point:
+                type = RegionType.Point;
+                break;
+            case RegionDataType.Polyline:
                 type = RegionType.Polyline;
                 break;
             default:

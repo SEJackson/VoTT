@@ -66,7 +66,6 @@ describe("Editor Canvas", () => {
         expect(wrapper.find(".canvas-enabled").exists()).toBe(true);
         expect(wrapper.state()).toEqual({
             contentSource: null,
-            selectedRegions: [],
             currentAsset: canvas.props.selectedAsset,
         });
     });
