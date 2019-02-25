@@ -14,31 +14,34 @@ import { PreviousAsset } from "./react/components/toolbar/previousAsset";
 export default function registerToolbar() {
     ToolbarItemFactory.register(Select, {
         name: "selectCanvas",
-        tooltip: "Select",
+        tooltip: "Select (V)",
         icon: "fa-mouse-pointer",
         group: "canvas",
         type: ToolbarItemType.State,
+        accelerators: ["v", "V"],
     });
 
     ToolbarItemFactory.register(DrawRectangle, {
         name: "drawRectangle",
-        tooltip: "Draw Rectangle",
+        tooltip: "Draw Rectangle (R)",
         icon: "fa-vector-square",
         group: "canvas",
         type: ToolbarItemType.State,
+        accelerators: ["r", "R"],
     });
 
     ToolbarItemFactory.register(DrawPolygon, {
         name: "drawPolygon",
-        tooltip: "Draw Polygon",
+        tooltip: "Draw Polygon (P)",
         icon: "fa-draw-polygon",
         group: "canvas",
         type: ToolbarItemType.State,
+        accelerators: ["p", "P"],
     });
 
     ToolbarItemFactory.register(PreviousAsset, {
         name: "navigatePreviousAsset",
-        tooltip: "Previous Asset",
+        tooltip: "Previous Asset (W)",
         icon: "fas fa-arrow-circle-up",
         group: "navigation",
         type: ToolbarItemType.Action,
@@ -47,7 +50,7 @@ export default function registerToolbar() {
 
     ToolbarItemFactory.register(NextAsset, {
         name: "navigateNextAsset",
-        tooltip: "Next Asset",
+        tooltip: "Next Asset (S)",
         icon: "fas fa-arrow-circle-down",
         group: "navigation",
         type: ToolbarItemType.Action,
@@ -56,17 +59,19 @@ export default function registerToolbar() {
 
     ToolbarItemFactory.register(SaveProject, {
         name: "saveProject",
-        tooltip: "Save Project",
+        tooltip: "Save Project (Ctrl+S)",
         icon: "fa-save",
         group: "project",
         type: ToolbarItemType.Action,
+        accelerators: ["Ctrl+s", "Ctrl+S"],
     });
 
     ToolbarItemFactory.register(ExportProject, {
         name: "exportProject",
-        tooltip: "Export Project",
+        tooltip: "Export Project (X)",
         icon: "fa-external-link-square-alt",
         group: "project",
         type: ToolbarItemType.Action,
+        accelerators: ["x", "X"],
     });
 }
