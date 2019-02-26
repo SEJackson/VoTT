@@ -14,12 +14,7 @@ import { AssetProviderFactory } from "../../../../providers/storage/assetProvide
 import createReduxStore from "../../../../redux/store/store";
 import { AssetService } from "../../../../services/assetService";
 import registerToolbar from "../../../../registerToolbar";
-import { DrawPolygon } from "../../toolbar/drawPolygon";
-import { DrawRectangle } from "../../toolbar/drawRectangle";
-import { Select } from "../../toolbar/select";
-import { KeyboardManager } from "../../common/keyboardManager/keyboardManager";
-import { NextAsset } from "../../toolbar/nextAsset";
-import { PreviousAsset } from "../../toolbar/previousAsset";
+import { KeyboardManager, KeyEventType } from "../../common/keyboardManager/keyboardManager";
 
 jest.mock("../../../../services/projectService");
 import ProjectService from "../../../../services/projectService";
@@ -359,18 +354,18 @@ describe("Editor Page Component", () => {
         });
 
         it("editor mode is changed correctly", async () => {
-            wrapper.find(DrawPolygon).simulate("click");
+            wrapper.find(".drawPolygon").simulate("click");
             expect(getState(wrapper).editorMode).toEqual(EditorMode.Polygon);
 
-            wrapper.find(DrawRectangle).simulate("click");
+            wrapper.find(".drawRectangle").simulate("click");
             expect(getState(wrapper).editorMode).toEqual(EditorMode.Rectangle);
 
-            wrapper.find(Select).simulate("click");
+            wrapper.find(".selectCanvas").simulate("click");
             expect(getState(wrapper).editorMode).toEqual(EditorMode.Select);
         });
 
         it("selects the next asset when clicking the 'Next Asset' button in the toolbar", async () => {
-            await MockFactory.flushUi(() => wrapper.find(NextAsset).simulate("click")); // Move to Asset 2
+            await MockFactory.flushUi(() => wrapper.find(".navigateNextAsset").simulate("click")); // Move to Asset 2
             wrapper.update();
 
             const expectedAsset = editorPage.state().assets[1];
@@ -378,9 +373,12 @@ describe("Editor Page Component", () => {
         });
 
         it("selects the previous asset when clicking the 'Previous Asset' button in the toolbar", async () => {
-            await MockFactory.flushUi(() => wrapper.find(NextAsset).simulate("click")); // Move to Asset 2
-            await MockFactory.flushUi(() => wrapper.find(NextAsset).simulate("click")); // Move to Asset 3
-            await MockFactory.flushUi(() => wrapper.find(PreviousAsset).simulate("click")); // Move to Asset 2
+            await MockFactory.flushUi(() => wrapper
+                .find(".navigateNextAsset").simulate("click")); // Move to Asset 2
+            await MockFactory.flushUi(() => wrapper
+                .find(".navigateNextAsset").simulate("click")); // Move to Asset 3
+            await MockFactory.flushUi(() => wrapper
+                .find(".navigatePreviousAsset").simulate("click")); // Move to Asset 2
 
             wrapper.update();
 
@@ -459,6 +457,123 @@ describe("Editor Page Component", () => {
             expect(editorPage.state().selectedAsset.regions[0].tags.length).toEqual(0);
             wrapper.find(EditorFooter).props().onTagClicked(expectedTag);
             expect(editorPage.state().selectedAsset.regions[0].tags.length).toEqual(1);
+        });
+    });
+
+    describe("Canvas regions management", () => {
+
+        const copiedRegion = MockFactory.createTestRegion("copiedRegion");
+
+        beforeAll(() => {
+            const clipboard = (navigator as any).clipboard;
+            if (!(clipboard && clipboard.writeText)) {
+                (navigator as any).clipboard = {
+                    writeText: jest.fn(() => Promise.resolve()),
+                    readText: jest.fn(() => Promise.resolve(JSON.stringify([copiedRegion]))),
+                };
+            }
+        })
+        
+        function dispatchKeyEvent(key: string, keyEventType: KeyEventType= KeyEventType.KeyDown) {
+            window.dispatchEvent(new KeyboardEvent(
+                keyEventType, {
+                    key,
+                },
+            ));
+        }
+
+        it("Copies currently selected regions to clipboard", async () => {
+            const project = MockFactory.createTestProject();
+            const store = createReduxStore({
+                ...MockFactory.initialState(),
+                currentProject: project,
+            });
+
+            const editorPageWrapper = createComponent(store, MockFactory.editorPageProps());
+            await waitForSelectedAsset(editorPageWrapper);
+
+            editorPageWrapper.update();
+
+            const wrapper = editorPageWrapper.find(Canvas);
+            const canvas = wrapper.instance() as Canvas;
+            canvas.editor.onRegionSelected("test1", true);
+
+            const region1 = wrapper.state().currentAsset.regions.find((r) => r.id === "test1");
+
+            dispatchKeyEvent("Ctrl+c");
+
+            MockFactory.flushUi();
+
+            expect((navigator as any).clipboard.writeText).toBeCalledWith(JSON.stringify([region1]));
+        });
+
+        it("Pastes regions to canvas from clipboard", async () => {
+            const cProps: ICanvasProps = {
+                ...createProps().canvas,
+            };
+            const wrapper = createComponent(true, {
+                ...cProps,
+                selectedAsset: {
+                    ...cProps.selectedAsset,
+                    regions: [copiedRegion],
+                },
+            }).find(Canvas);
+
+            dispatchKeyEvent(Canvas.hotKeys.paste);
+
+            expect((navigator as any).clipboard.readText).toBeCalled();
+
+            const expectedNewRegion: IRegion = {
+                ...copiedRegion,
+                id: expect.any(String),
+                boundingBox: {
+                ...copiedRegion.boundingBox,
+                    left: copiedRegion.boundingBox.left + CanvasHelpers.pasteMargin,
+                    top: copiedRegion.boundingBox.top + CanvasHelpers.pasteMargin,
+                },
+                points: copiedRegion.points.map((p) => {
+                    return {
+                        x: p.x + CanvasHelpers.pasteMargin,
+                        y: p.y + CanvasHelpers.pasteMargin,
+                    };
+                }),
+            };
+
+            await MockFactory.flushUi();
+
+            expect(wrapper.state().currentAsset.regions).toEqual([
+                copiedRegion,
+                expectedNewRegion,
+            ]);
+        });
+
+        it("Cuts currently selected regions to clipboard", async () => {
+            const wrapper = createComponent(true).find(Canvas);
+            const original: IAssetMetadata = {
+                ...wrapper.prop("selectedAsset"),
+            };
+            const canvas = wrapper.instance() as Canvas;
+            canvas.editor.onRegionSelected("test1", true);
+            const region1 = wrapper.state().currentAsset.regions.find((r) => r.id === "test1");
+
+            dispatchKeyEvent(Canvas.hotKeys.cut);
+
+            const expectedRegions = [
+                ...original.regions.filter((r) => r.id !== "test1"),
+            ];
+
+            await MockFactory.flushUi();
+
+            expect(wrapper.state().currentAsset.regions).toMatchObject(expectedRegions);
+            expect((navigator as any).clipboard.writeText).toBeCalledWith(JSON.stringify([region1]));
+        });
+
+        it("Clears all regions from asset", async () => {
+            const wrapper = createComponent(true).find(Canvas);
+            dispatchKeyEvent(Canvas.hotKeys.clear);
+
+            await MockFactory.flushUi();
+            expect(wrapper.state().currentAsset.regions).toEqual([]);
         });
     });
 });
