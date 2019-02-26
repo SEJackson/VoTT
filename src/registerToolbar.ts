@@ -68,10 +68,10 @@ export default function registerToolbar() {
 
     ToolbarItemFactory.register(ExportProject, {
         name: "exportProject",
-        tooltip: "Export Project (X)",
+        tooltip: "Export Project (Ctrl+E)",
         icon: "fa-external-link-square-alt",
         group: "project",
         type: ToolbarItemType.Action,
-        accelerators: ["x", "X"],
+        accelerators: ["Ctrl+e", "Ctrl+E"],
     });
 }

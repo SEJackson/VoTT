@@ -2,13 +2,14 @@ import React from "react";
 import _ from "lodash";
 import { EditorToolbar, IEditorToolbarProps, IEditorToolbarState } from "./editorToolbar";
 import MockFactory from "../../../../common/mockFactory";
-import { ToolbarItemFactory } from "../../../../providers/toolbar/toolbarItemFactory";
+import { ToolbarItemFactory, IToolbarItemRegistration } from "../../../../providers/toolbar/toolbarItemFactory";
 import registerToolbar from "../../../../registerToolbar";
 import { ReactWrapper, mount } from "enzyme";
 import { Select } from "../../toolbar/select";
 import { ToolbarItem } from "../../toolbar/toolbarItem";
 import { KeyboardManager } from "../../common/keyboardManager/keyboardManager";
 import { DrawPolygon } from "../../toolbar/drawPolygon";
+import { DrawRectangle } from "../../toolbar/drawRectangle";
 
 describe("Editor Toolbar", () => {
     let wrapper: ReactWrapper = null;
@@ -65,5 +66,11 @@ describe("Editor Toolbar", () => {
 
         const toolbar = wrapper.find(EditorToolbar) as ReactWrapper<IEditorToolbarProps, IEditorToolbarState>;
         expect(toolbar.state().selectedItem).toEqual(DrawPolygon.prototype);
+    });
+
+    it("Sets correct keyboard binding when accelerator is defined", () => {
+        const drawRectangle = wrapper.find(DrawRectangle).first();
+        expect(drawRectangle.exists()).toBe(true);
+        expect(drawRectangle.props().accelerators).toContain("r");
     });
 });
